@@ -17,7 +17,7 @@ A Laravel-based book shop assistant powered by AI. Users can search for books th
 | Frontend | Inertia.js 2.0 + React 18 |
 | AI | Laravel AI 0.6.8 (Agent + Tool system) |
 | Auth | Laravel Breeze (Inertia/React) |
-| Database | SQLite (default) |
+| Database | MySQL |
 | Styling | Tailwind CSS 3 |
 
 ## AI Architecture
