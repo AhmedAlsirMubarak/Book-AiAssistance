@@ -5,7 +5,7 @@ namespace Database\Seeders;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use App\Models\Book;
-use app\Models\category;
+use App\Models\Category;
 
 class BookSeeder extends Seeder
 {
@@ -15,31 +15,32 @@ class BookSeeder extends Seeder
     public function run(): void
     {
         // Create some sample categories
-        $programing= category::create(['name' => 'programing']);
-        $horror = category::create(['name' => 'horror']);
-        $fiction = category::create(['name' => 'fiction']);
-        $fantasy = category::create(['name' => 'fantasy']);
+        
+       $programming = Category::create(['name' => 'programming']);
+        $horror = Category::create(['name' => 'horror']);
+        $fiction = Category::create(['name' => 'fiction']);
+        $fantasy = Category::create(['name' => 'fantasy']);
 
         //create some sample books
         
         Book::create([
             'title' => 'The Great Gatsby',
             'author' => 'F. Scott Fitzgerald',
-            'description' => 'A novel about the American dream and the decadence of the Jazz Age.',
+            'price' => 100,
             'category_id' => $fiction->id,
         ]);
 
         Book::create([
             'title' => 'The Shining',
             'author' => 'Stephen King',
-            'description' => 'A horror novel about a family staying in an isolated hotel with a dark past.',
+            'price' => 1200,
             'category_id' => $horror->id,
         ]);
 
             Book::create([
                 'title' => 'Harry Potter and the Sorcerer\'s Stone',
                 'author' => 'J.K. Rowling',
-                'description' => 'The first book in the Harry Potter series, introducing the magical world of Hogwarts.',
+                'price' => 500,
                 'category_id' => $fantasy->id,
             ]);
 
