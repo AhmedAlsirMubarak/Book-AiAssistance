@@ -22,11 +22,11 @@ export default function Login({ status, canResetPassword }) {
     };
 
     return (
-        <GuestLayout>
+        <GuestLayout title="Welcome back" subtitle="Log in to keep the conversation going.">
             <Head title="Log in" />
 
             {status && (
-                <div className="mb-4 text-sm font-medium text-green-600">
+                <div className="mb-4 text-sm font-medium text-emerald-300">
                     {status}
                 </div>
             )}
@@ -65,7 +65,7 @@ export default function Login({ status, canResetPassword }) {
                     <InputError message={errors.password} className="mt-2" />
                 </div>
 
-                <div className="mt-4 block">
+                <div className="mt-5 flex items-center justify-between">
                     <label className="flex items-center">
                         <Checkbox
                             name="remember"
@@ -74,26 +74,31 @@ export default function Login({ status, canResetPassword }) {
                                 setData('remember', e.target.checked)
                             }
                         />
-                        <span className="ms-2 text-sm text-gray-600">
+                        <span className="ms-2 text-sm text-white/60">
                             Remember me
                         </span>
                     </label>
-                </div>
 
-                <div className="mt-4 flex items-center justify-end">
                     {canResetPassword && (
                         <Link
                             href={route('password.request')}
-                            className="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                            className="rounded-md text-sm text-white/60 transition hover:text-white focus:outline-none focus:ring-2 focus:ring-fuchsia-400/60 focus:ring-offset-2 focus:ring-offset-ink"
                         >
-                            Forgot your password?
+                            Forgot password?
                         </Link>
                     )}
-
-                    <PrimaryButton className="ms-4" disabled={processing}>
-                        Log in
-                    </PrimaryButton>
                 </div>
+
+                <PrimaryButton className="mt-7 w-full py-3" disabled={processing}>
+                    Log in
+                </PrimaryButton>
+
+                <p className="mt-6 text-center text-sm text-white/50">
+                    New to Folio?{' '}
+                    <Link href={route('register')} className="font-semibold text-fuchsia-200 transition hover:text-white">
+                        Create an account
+                    </Link>
+                </p>
             </form>
         </GuestLayout>
     );

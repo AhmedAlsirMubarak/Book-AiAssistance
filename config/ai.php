@@ -13,12 +13,25 @@ return [
     |
     */
 
-    'default' => 'openai',
+    'default' => env('AI_PROVIDER', 'openrouter'),
     'default_for_images' => 'gemini',
     'default_for_audio' => 'openai',
     'default_for_transcription' => 'openai',
     'default_for_embeddings' => 'openai',
     'default_for_reranking' => 'cohere',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Book Assistant Model
+    |--------------------------------------------------------------------------
+    |
+    | The model the book assistant uses with the default provider above. The
+    | name must be valid for that provider, e.g. "openai/gpt-4o-mini" on
+    | OpenRouter or "gpt-4o-mini" on OpenAI.
+    |
+    */
+
+    'assistant_model' => env('AI_ASSISTANT_MODEL', 'openai/gpt-4o-mini'),
 
     /*
     |--------------------------------------------------------------------------

@@ -2,96 +2,68 @@
 
 namespace App\Ai\Agents;
 
+use App\Ai\Tools\SearchBooks;
+use App\Models\Category;
+use Laravel\Ai\Concerns\RemembersConversations;
 use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\Conversational;
 use Laravel\Ai\Contracts\HasTools;
 use Laravel\Ai\Contracts\Tool;
-use Laravel\Ai\Messages\Message;
 use Laravel\Ai\Promptable;
 use Stringable;
-use App\Models\User;
-use App\Models\agent_conversationMessages;
-use App\Ai\Tools\SearchBooks;
 
 class BookFinderAgent implements Agent, Conversational, HasTools
 {
-    use Promptable;
+    use Promptable, RemembersConversations;
 
-    public function __construct(
-        public ?User $user = null, 
-        public ?string $conversationId = null
-    ) {
-
-
-
-    }   
     /**
      * Get the instructions that the agent should follow.
      */
     public function instructions(): Stringable|string
     {
-        return <<<'prompt'
-        You are a smart and friendly book sho assistant.
-        You help users find books from our database.
+        $categories = Category::query()->orderBy('name')->pluck('name')->implode(', ');
 
-        Our database contains:
-        - Books (title,author,price)
-        - Categories(each book belongs to a category)
-             prompt;
+        return <<<PROMPT
+        You are Folio, a smart and friendly book shop assistant.
+        You help customers find books that are available in our shop.
 
-        Your job is to understand user queries and extract:
-        - author (if mentioned)
-        - category (if mentioned)
-        - price range (if user mentioned budget like " under $2000")
+        Our catalog contains books (title, author, price, description) and every book
+        belongs to a category. The available categories are: {$categories}.
 
-        Rules:
-        - Alyways foucs on books available in our shop
-        - Keep responses short and helpful
-        -Mention book title, author,and price when suggesting
+        How to work:
+        - Understand the customer's request and extract the author, category, title keywords
+          and budget (e.g. "under $20" means max_price = 20) when they are mentioned.
+        - Always use the search_books tool to look up books before recommending anything.
+          Never invent books that the tool did not return.
+        - If the first search returns nothing, try a broader search (e.g. drop a filter)
+          before telling the customer nothing matched.
+        - When suggesting books, mention the title, author and price.
+        - Keep responses short, warm and helpful. Use **bold** for book titles.
+          The matching books are also shown to the customer as cards, so do not repeat
+          every detail of every book.
 
-        If the user asks something unrelated:
-        - Do not answer that question
-        - Politely bring them back to books
+        If the customer gives a vague request, ask one follow-up question, for example:
+        "What kind of books do you enjoy? I can search by author, category or budget."
 
-        Example:
-        USer: "Whats the weather?"
-        You: "I can help you find books. What kind of books are you looking for?"
+        If the customer asks something unrelated to books:
+        - Do not answer that question.
+        - Politely bring them back to books.
 
-        User: "Tech me Laravel"
-        You: I can suggest / recomend LAravel books for you"
+        Examples:
+        Customer: "What's the weather?"
+        You: "I can only help with books! What kind of books are you looking for?"
 
-        If the user gives a vague request:
-        - Ask a follow-up question related to books 
-
-        Example:
-        "What kind of books do you prefer ? Author, category , or budget?"
-
-        Important:
-        - Never go off-topic
-        - Alywas guide the user back to books
-
-
-        Then you will use the extracted information to query our database and find relevant books for the user.
+        Customer: "Teach me Laravel"
+        You: (search for Laravel / programming books) "I can't teach you directly, but these books will!"
+        PROMPT;
     }
 
     /**
-     * Get the list of messages comprising the conversation so far.
-     *
-     * @return Message[]
+     * Get the maximum number of conversation messages to include in context.
      */
-    public function messages(): iterable
+    protected function maxConversationMessages(): int
     {
-      if ($this->conversationId) {
-        return agent_conversationMessages::where('conversation_id', $this->conversationId,$this->connection_aborted)
-        ->latest()
-        ->limit(20)
-        ->get();
-        ->map(function ($message) {
-            return new Message(
-                content: $message->content,
-                role: $message->role,
-            );
-        });
+        return 30;
     }
 
     /**
@@ -101,6 +73,6 @@ class BookFinderAgent implements Agent, Conversational, HasTools
      */
     public function tools(): iterable
     {
-        return [new SearchBooks()];
+        return [new SearchBooks];
     }
 }

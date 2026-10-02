@@ -8,30 +8,29 @@ export default function Edit({ mustVerifyEmail, status }) {
     return (
         <AuthenticatedLayout
             header={
-                <h2 className="text-xl font-semibold leading-tight text-gray-800">
-                    Profile
-                </h2>
+                <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-fuchsia-200/70">Account</p>
+                    <h1 className="mt-1 font-serif text-4xl text-white sm:text-5xl">Your profile</h1>
+                </div>
             }
         >
             <Head title="Profile" />
 
-            <div className="py-12">
-                <div className="mx-auto max-w-7xl space-y-6 sm:px-6 lg:px-8">
-                    <div className="bg-white p-4 shadow sm:rounded-lg sm:p-8">
-                        <UpdateProfileInformationForm
-                            mustVerifyEmail={mustVerifyEmail}
-                            status={status}
-                            className="max-w-xl"
-                        />
-                    </div>
+            <div className="mx-auto max-w-[83rem] space-y-5 px-3 pb-16 pt-6 sm:px-6">
+                <div className="glass rounded-[1.75rem] p-5 sm:p-8">
+                    <UpdateProfileInformationForm
+                        mustVerifyEmail={mustVerifyEmail}
+                        status={status}
+                        className="max-w-xl"
+                    />
+                </div>
 
-                    <div className="bg-white p-4 shadow sm:rounded-lg sm:p-8">
-                        <UpdatePasswordForm className="max-w-xl" />
-                    </div>
+                <div className="glass rounded-[1.75rem] p-5 sm:p-8">
+                    <UpdatePasswordForm className="max-w-xl" />
+                </div>
 
-                    <div className="bg-white p-4 shadow sm:rounded-lg sm:p-8">
-                        <DeleteUserForm className="max-w-xl" />
-                    </div>
+                <div className="glass rounded-[1.75rem] p-5 sm:p-8">
+                    <DeleteUserForm className="max-w-xl" />
                 </div>
             </div>
         </AuthenticatedLayout>

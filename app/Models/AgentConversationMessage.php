@@ -3,18 +3,34 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class AgentConversationMessage extends Model
 {
     protected $table = 'agent_conversation_messages';
 
-    protected $fillable = ['id','user_id','title'];
+    protected $keyType = 'string';
 
     public $incrementing = false;
 
-    public function messages():hasMany
+    protected $fillable = [
+        'id', 'conversation_id', 'user_id', 'agent', 'role', 'content',
+        'attachments', 'tool_calls', 'tool_results', 'usage', 'meta',
+    ];
+
+    protected function casts(): array
     {
-        return $this->hasMany(AgentConversationMessage::class, 'conversation_id', 'id');
+        return [
+            'attachments' => 'array',
+            'tool_calls' => 'array',
+            'tool_results' => 'array',
+            'usage' => 'array',
+            'meta' => 'array',
+        ];
+    }
+
+    public function conversation(): BelongsTo
+    {
+        return $this->belongsTo(AgentConversation::class, 'conversation_id');
     }
 }

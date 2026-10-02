@@ -19,10 +19,10 @@ export default function ConfirmPassword() {
     };
 
     return (
-        <GuestLayout>
+        <GuestLayout title="Confirm your password">
             <Head title="Confirm Password" />
 
-            <div className="mb-4 text-sm text-gray-600">
+            <div className="mb-4 text-sm text-white/60">
                 This is a secure area of the application. Please confirm your
                 password before continuing.
             </div>
@@ -44,8 +44,8 @@ export default function ConfirmPassword() {
                     <InputError message={errors.password} className="mt-2" />
                 </div>
 
-                <div className="mt-4 flex items-center justify-end">
-                    <PrimaryButton className="ms-4" disabled={processing}>
+                <div className="mt-7">
+                    <PrimaryButton className="w-full py-3" disabled={processing}>
                         Confirm
                     </PrimaryButton>
                 </div>
