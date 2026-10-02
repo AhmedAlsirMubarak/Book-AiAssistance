@@ -32,23 +32,25 @@ export function formatMessage(text = '') {
 
     const flushList = () => {
         if (list) {
-            html.push(`<${list.type}>${list.items.map((item) => `<li>${inline(item)}</li>`).join('')}</${list.type}>`);
+            // Keep the original numbering when a numbered list is interrupted by paragraphs.
+            const start = list.type === 'ol' && list.start > 1 ? ` start="${list.start}"` : '';
+            html.push(`<${list.type}${start}>${list.items.map((item) => `<li>${inline(item)}</li>`).join('')}</${list.type}>`);
             list = null;
         }
     };
 
     for (const line of lines) {
         const bullet = line.match(/^\s*[-*•]\s+(.*)$/);
-        const numbered = line.match(/^\s*\d+[.)]\s+(.*)$/);
+        const numbered = line.match(/^\s*(\d+)[.)]\s+(.*)$/);
         const type = bullet ? 'ul' : numbered ? 'ol' : null;
 
         if (type) {
             flushParagraph();
             if (list?.type !== type) {
                 flushList();
-                list = { type, items: [] };
+                list = { type, items: [], start: numbered ? Number(numbered[1]) : 1 };
             }
-            list.items.push((bullet ?? numbered)[1]);
+            list.items.push(bullet ? bullet[1] : numbered[2]);
         } else if (line.trim() === '') {
             flushParagraph();
             flushList();

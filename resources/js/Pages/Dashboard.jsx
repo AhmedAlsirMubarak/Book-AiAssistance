@@ -37,6 +37,8 @@ export default function Dashboard({ conversations: initialConversations, convers
     const [error, setError] = useState(null);
     const [historyOpen, setHistoryOpen] = useState(false);
     const [deleting, setDeleting] = useState(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const deletingRef = useRef(false);
 
     const scrollRef = useRef(null);
     const inputRef = useRef(null);
@@ -133,10 +135,18 @@ export default function Dashboard({ conversations: initialConversations, convers
     };
 
     const confirmDelete = () => {
-        const id = deleting.id;
-        router.delete(route('assistant.conversations.destroy', id), {
+        // Guard with a ref so a double-click can't send a second DELETE (which would 404).
+        if (!deleting || deletingRef.current) return;
+        deletingRef.current = true;
+        setIsDeleting(true);
+
+        router.delete(route('assistant.conversations.destroy', deleting.id), {
             preserveScroll: true,
-            onFinish: () => setDeleting(null),
+            onFinish: () => {
+                deletingRef.current = false;
+                setIsDeleting(false);
+                setDeleting(null);
+            },
         });
     };
 
@@ -264,15 +274,19 @@ export default function Dashboard({ conversations: initialConversations, convers
                 </section>
             </div>
 
-            <Modal show={deleting !== null} onClose={() => setDeleting(null)} maxWidth="md">
+            <Modal show={deleting !== null} onClose={() => !isDeleting && setDeleting(null)} maxWidth="md">
                 <div className="p-6">
                     <h2 className="text-lg font-semibold text-white">Delete this conversation?</h2>
                     <p className="mt-2 text-sm text-white/60">
                         “{deleting?.title}” and all of its messages will be permanently removed.
                     </p>
                     <div className="mt-6 flex justify-end gap-3">
-                        <SecondaryButton onClick={() => setDeleting(null)}>Cancel</SecondaryButton>
-                        <DangerButton onClick={confirmDelete}>Delete</DangerButton>
+                        <SecondaryButton onClick={() => setDeleting(null)} disabled={isDeleting}>
+                            Cancel
+                        </SecondaryButton>
+                        <DangerButton onClick={confirmDelete} disabled={isDeleting}>
+                            {isDeleting ? 'Deleting…' : 'Delete'}
+                        </DangerButton>
                     </div>
                 </div>
             </Modal>
@@ -397,10 +411,12 @@ function ChatMessage({ message }) {
         <div className="flex animate-rise items-start gap-3">
             <ApplicationLogo className="mt-0.5 h-9 w-9 shrink-0" />
             <div className="min-w-0 flex-1">
-                <div
-                    className="glass-subtle prose-chat inline-block max-w-full rounded-3xl rounded-tl-lg px-4 py-3 text-[15px] leading-relaxed text-white/85"
-                    dangerouslySetInnerHTML={{ __html: formatMessage(message.content) }}
-                />
+                {message.content?.trim() && (
+                    <div
+                        className="glass-subtle prose-chat inline-block max-w-full rounded-3xl rounded-tl-lg px-4 py-3 text-[15px] leading-relaxed text-white/85"
+                        dangerouslySetInnerHTML={{ __html: formatMessage(message.content) }}
+                    />
+                )}
 
                 {message.books?.length > 0 && (
                     <div className="mt-3 grid gap-3 sm:grid-cols-2">

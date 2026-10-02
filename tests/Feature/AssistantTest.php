@@ -9,6 +9,10 @@ use App\Models\Book;
 use App\Models\Category;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Laravel\Ai\Attributes\MaxSteps;
+use Laravel\Ai\Messages\AssistantMessage;
+use Laravel\Ai\Messages\ToolResultMessage;
 use Laravel\Ai\Tools\Request as ToolRequest;
 use Tests\TestCase;
 
@@ -46,6 +50,67 @@ class AssistantTest extends TestCase
 
         $this->assertDatabaseCount('agent_conversations', 1);
         $this->assertDatabaseCount('agent_conversation_messages', 2);
+    }
+
+    public function test_an_empty_model_reply_is_replaced_with_a_helpful_message(): void
+    {
+        BookFinderAgent::fake(['']);
+
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)
+            ->postJson('/assistant/messages', ['message' => 'i need a web development books'])
+            ->assertOk();
+
+        $this->assertStringContainsString("couldn't find a match", $response->json('reply.content'));
+
+        // The saved conversation renders the same fallback when reopened.
+        $this->actingAs($user)
+            ->get('/dashboard/'.$response->json('conversation.id'))
+            ->assertInertia(fn ($page) => $page->where(
+                'messages.1.content',
+                fn ($content) => str_contains($content, "couldn't find a match"),
+            ));
+    }
+
+    public function test_history_with_unanswered_tool_calls_is_repaired_before_reuse(): void
+    {
+        $user = User::factory()->create();
+        $conversation = AgentConversation::create(['id' => (string) str()->uuid(), 'user_id' => $user->id, 'title' => 'Cut off']);
+
+        $row = fn (array $attributes) => DB::table('agent_conversation_messages')->insert([
+            'id' => (string) str()->uuid7(), 'conversation_id' => $conversation->id, 'user_id' => $user->id,
+            'agent' => BookFinderAgent::class, 'attachments' => '[]', 'tool_calls' => '[]', 'tool_results' => '[]',
+            'usage' => '[]', 'meta' => '[]', 'created_at' => now(), 'updated_at' => now(), ...$attributes,
+        ]);
+
+        // A turn that hit the step limit: two searches requested, only one ever ran.
+        $row(['role' => 'user', 'content' => 'web development books']);
+        $row(['role' => 'assistant', 'content' => '',
+            'tool_calls' => json_encode([
+                ['id' => 'call_1', 'name' => 'search_books', 'arguments' => ['q' => 'web development']],
+                ['id' => 'call_2', 'name' => 'search_books', 'arguments' => ['category' => 'programming']],
+            ]),
+            'tool_results' => json_encode([
+                ['id' => 'call_1', 'name' => 'search_books', 'arguments' => ['q' => 'web development'], 'result' => '{"books":[]}'],
+            ]),
+        ]);
+
+        $messages = BookFinderAgent::make()->continue($conversation->id, $user)->messages();
+
+        $assistant = collect($messages)->first(fn ($message) => $message instanceof AssistantMessage);
+        $results = collect($messages)->first(fn ($message) => $message instanceof ToolResultMessage);
+
+        $this->assertSame(['call_1'], $assistant->toolCalls->pluck('id')->all());
+        $this->assertSame(['call_1'], $results->toolResults->pluck('id')->all());
+    }
+
+    public function test_the_agent_allows_enough_steps_to_retry_a_search_and_reply(): void
+    {
+        $attribute = (new \ReflectionClass(BookFinderAgent::class))->getAttributes(MaxSteps::class)[0] ?? null;
+
+        $this->assertNotNull($attribute, 'BookFinderAgent must set #[MaxSteps]; the SDK default is only 2 steps.');
+        $this->assertGreaterThanOrEqual(4, $attribute->newInstance()->value);
     }
 
     public function test_users_cannot_access_other_users_conversations(): void

@@ -1,9 +1,13 @@
 import ApplicationLogo from '@/Components/ApplicationLogo';
 import Aurora from '@/Components/Aurora';
 import BookCover from '@/Components/BookCover';
+import FlipBook from '@/Components/FlipBook/FlipBook';
+import { guideChapters, guidePages } from '@/Components/FlipBook/guidePages';
+import ShelfCarousel from '@/Components/ShelfCarousel';
 import { formatPrice } from '@/lib/format';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePoll } from '@inertiajs/react';
 import { ArrowRight, History, MessagesSquare, SlidersHorizontal } from 'lucide-react';
+import { useMemo } from 'react';
 
 const features = [
     {
@@ -23,8 +27,13 @@ const features = [
     },
 ];
 
-export default function Welcome({ auth, canLogin, canRegister, stats, featured }) {
+export default function Welcome({ auth, canLogin, canRegister, featured }) {
     const cta = auth.user ? route('dashboard') : canRegister ? route('register') : route('login');
+
+    // Re-fetch just the shelf every minute so new books appear without a reload.
+    usePoll(60_000, { only: ['featured'] });
+
+    const guide = useMemo(() => guidePages({ startHref: cta }), [cta]);
 
     return (
         <>
@@ -74,11 +83,7 @@ export default function Welcome({ auth, canLogin, canRegister, stats, featured }
                 <main className="mx-auto max-w-6xl px-4 sm:px-6">
                     <section className="grid items-center gap-12 pb-20 pt-16 sm:pt-24 lg:grid-cols-[1.1fr_1fr]">
                         <div className="animate-rise">
-                            <span className="glass-subtle inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-medium text-white/75">
-                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgb(52_211_153)]" />
-                                {stats.books} books across {stats.categories} categories
-                            </span>
-                            <h1 className="mt-6 font-serif text-5xl leading-[1.02] tracking-tight text-white sm:text-7xl">
+                            <h1 className="font-serif text-5xl leading-[1.02] tracking-tight text-white sm:text-7xl">
                                 Find your next book by <span className="text-shimmer italic">just asking.</span>
                             </h1>
                             <p className="mt-6 max-w-lg text-lg leading-relaxed text-white/60">
@@ -119,10 +124,26 @@ export default function Welcome({ auth, canLogin, canRegister, stats, featured }
                         ))}
                     </section>
 
+                    <section className="pb-28" aria-labelledby="guide-heading">
+                        <div className="mx-auto mb-12 max-w-xl text-center">
+                            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-fuchsia-200/70">New here?</p>
+                            <h2 id="guide-heading" className="mt-2 font-serif text-4xl text-white sm:text-5xl">
+                                Flip through the <span className="text-shimmer italic">guide</span>
+                            </h2>
+                            <p className="mt-3 text-sm text-white/55">
+                                Everything Folio can do, in a few pages. Click a page, swipe, or use your arrow keys to turn it.
+                            </p>
+                        </div>
+                        <FlipBook pages={guide} chapters={guideChapters} />
+                    </section>
+
                     {featured.length > 0 && (
                         <section className="pb-24">
                             <div className="mb-6 flex items-end justify-between">
-                                <h2 className="font-serif text-3xl text-white sm:text-4xl">On the shelf today</h2>
+                                <div>
+                                    <h2 className="font-serif text-3xl text-white sm:text-4xl">On the shelf today</h2>
+                                    <p className="mt-1 text-sm text-white/45">Fresh arrivals and recent updates</p>
+                                </div>
                                 <Link
                                     href={auth.user ? route('books.index') : cta}
                                     className="text-sm font-medium text-white/60 transition hover:text-white"
@@ -130,34 +151,32 @@ export default function Welcome({ auth, canLogin, canRegister, stats, featured }
                                     Browse all →
                                 </Link>
                             </div>
-                            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-                                {featured.map((book) => (
-                                    <div key={book.id} className="glass group rounded-[1.5rem] p-3.5">
-                                        <BookCover
-                                            book={book}
-                                            className="aspect-[2/3] w-full transition duration-500 group-hover:scale-[1.02]"
-                                        />
-                                        <p className="mt-3 truncate text-sm font-semibold text-white">{book.title}</p>
-                                        <div className="mt-0.5 flex items-center justify-between gap-2 text-xs">
-                                            <span className="truncate text-white/50">{book.author}</span>
-                                            <span className="font-semibold text-fuchsia-200">{formatPrice(book.price)}</span>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
+                            <ShelfCarousel
+                                books={featured}
+                                hrefFor={(book) =>
+                                    auth.user
+                                        ? route('dashboard', { prompt: `Tell me about "${book.title}" and suggest similar books.` })
+                                        : cta
+                                }
+                            />
                         </section>
                     )}
                 </main>
 
                 <footer className="border-t border-white/10 py-8 text-center text-xs text-white/35">
-                    © {new Date().getFullYear()} Folio · Built with Laravel, Inertia & React
+                    © {new Date().getFullYear()} Folio · Built by Ahmed Alsir
                 </footer>
             </div>
         </>
     );
 }
 
-const previewBook = { title: 'The Shining', author: 'Stephen King', price: 15.99 };
+const previewBook = {
+    title: 'The Shining',
+    author: 'Stephen King',
+    price: 15.99,
+    cover_url: '/images/covers/the-shining.jpg', // via Open Library (covers.openlibrary.org)
+};
 
 function ChatPreview() {
     const book = previewBook;
@@ -185,12 +204,18 @@ function ChatPreview() {
                         <strong className="text-white">It</strong> for $18.99. Want something shorter?
                     </div>
                     {(
-                        <div className="glass-subtle flex max-w-[88%] items-center gap-3 rounded-2xl p-3">
-                            <BookCover book={book} className="h-20 w-14 shrink-0 !p-1.5 [&_p:first-of-type]:text-[10px]" />
+                        <div className="glass-subtle flex max-w-[92%] items-center gap-5 rounded-3xl p-4">
+                            <BookCover
+                                book={book}
+                                className="aspect-2/3 w-28 shrink-0 shadow-[0_18px_40px_-12px_rgb(0_0_0/0.9)] transition duration-500 hover:-rotate-2 hover:scale-105 sm:w-32"
+                            />
                             <div className="min-w-0">
-                                <p className="truncate font-semibold text-white">{book.title}</p>
-                                <p className="truncate text-xs text-white/50">{book.author}</p>
-                                <p className="mt-1 text-sm font-semibold text-fuchsia-200">{formatPrice(book.price)}</p>
+                                <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-[11px] font-medium text-white/70">
+                                    Horror
+                                </span>
+                                <p className="mt-2 font-serif text-2xl leading-tight text-white">{book.title}</p>
+                                <p className="mt-0.5 truncate text-sm text-white/55">{book.author}</p>
+                                <p className="mt-3 text-xl font-semibold text-fuchsia-200">{formatPrice(book.price)}</p>
                             </div>
                         </div>
                     )}

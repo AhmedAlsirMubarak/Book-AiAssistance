@@ -71,16 +71,35 @@ class AssistantController extends Controller
         $conversation = AgentConversation::find($response->conversationId);
         $conversation?->touch();
 
+        $books = $this->booksFromToolResults(
+            $response->toolResults->map(fn ($result) => $result->toArray())->all()
+        );
+
         return response()->json([
             'conversation' => $conversation?->only('id', 'title', 'updated_at'),
             'reply' => [
                 'role' => 'assistant',
-                'content' => $response->text,
-                'books' => $this->booksFromToolResults(
-                    $response->toolResults->map(fn ($result) => $result->toArray())->all()
-                ),
+                'content' => $this->replyText($response->text, $books),
+                'books' => $books,
             ],
         ]);
+    }
+
+    /**
+     * Never show an empty bubble: if the model ended its turn without writing text
+     * (e.g. it ran out of steps mid-search), fall back to a helpful message.
+     *
+     * @param  array<int, array<string, mixed>>  $books
+     */
+    protected function replyText(?string $text, array $books): string
+    {
+        if (filled(trim((string) $text))) {
+            return $text;
+        }
+
+        return $books
+            ? 'Here are some books from our shelves that match what you asked for:'
+            : "I couldn't find a match for that in our catalog. Try an author, a category like fantasy or programming, or a budget, and I'll search again.";
     }
 
     /**
@@ -119,11 +138,17 @@ class AssistantController extends Controller
             ->orderBy('created_at')
             ->orderBy('id')
             ->get()
-            ->map(fn (AgentConversationMessage $message) => [
-                'role' => $message->role,
-                'content' => $message->content,
-                'books' => $this->booksFromToolResults($message->tool_results ?? []),
-            ])
+            ->map(function (AgentConversationMessage $message) {
+                $books = $this->booksFromToolResults($message->tool_results ?? []);
+
+                return [
+                    'role' => $message->role,
+                    'content' => $message->role === 'assistant'
+                        ? $this->replyText($message->content, $books)
+                        : $message->content,
+                    'books' => $books,
+                ];
+            })
             ->values()
             ->all();
     }

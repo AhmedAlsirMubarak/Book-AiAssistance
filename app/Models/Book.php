@@ -6,18 +6,43 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Storage;
 
 class Book extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['title', 'author', 'description', 'price', 'category_id'];
+    protected $fillable = ['title', 'author', 'description', 'cover_path', 'price', 'category_id'];
 
     protected function casts(): array
     {
         return [
             'price' => 'decimal:2',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        // Clean up the stored cover image along with the book.
+        static::deleted(fn (Book $book) => $book->deleteCover());
+    }
+
+    /**
+     * The public URL of the cover image, relative to the site root so it works on any host.
+     */
+    public function coverUrl(): ?string
+    {
+        return $this->cover_path ? '/storage/'.$this->cover_path : null;
+    }
+
+    /**
+     * Delete the stored cover image file, if there is one.
+     */
+    public function deleteCover(): void
+    {
+        if ($this->cover_path) {
+            Storage::disk('public')->delete($this->cover_path);
+        }
     }
 
     public function category(): BelongsTo
@@ -51,6 +76,7 @@ class Book extends Model
             'price' => (float) $this->price,
             'category' => $this->category?->name,
             'description' => $this->description,
+            'cover_url' => $this->coverUrl(),
         ];
     }
 }

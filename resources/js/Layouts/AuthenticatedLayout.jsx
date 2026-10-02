@@ -4,8 +4,19 @@ import Dropdown from '@/Components/Dropdown';
 import NavLink from '@/Components/NavLink';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink';
 import { Link, usePage } from '@inertiajs/react';
-import { ChevronDown, Library, LogOut, Menu, Sparkles, UserRound, X } from 'lucide-react';
-import { useState } from 'react';
+import {
+    ChevronDown,
+    CircleAlert,
+    CircleCheck,
+    Library,
+    LogOut,
+    Menu,
+    ShieldCheck,
+    Sparkles,
+    UserRound,
+    X,
+} from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 /**
  * @param {{ header?: React.ReactNode, fill?: boolean, children: React.ReactNode }} props
@@ -44,6 +55,12 @@ export default function AuthenticatedLayout({ header, fill = false, children }) 
                                     <Library className="h-4 w-4" />
                                     Catalog
                                 </NavLink>
+                                {user.is_admin && (
+                                    <NavLink href={route('admin.books.index')} active={route().current('admin.*')}>
+                                        <ShieldCheck className="h-4 w-4" />
+                                        Admin
+                                    </NavLink>
+                                )}
                             </div>
                         </div>
 
@@ -99,6 +116,11 @@ export default function AuthenticatedLayout({ header, fill = false, children }) 
                             <ResponsiveNavLink href={route('books.index')} active={route().current('books.index')}>
                                 <Library className="h-4 w-4" /> Catalog
                             </ResponsiveNavLink>
+                            {user.is_admin && (
+                                <ResponsiveNavLink href={route('admin.books.index')} active={route().current('admin.*')}>
+                                    <ShieldCheck className="h-4 w-4" /> Admin
+                                </ResponsiveNavLink>
+                            )}
                             <div className="my-2 border-t border-white/10" />
                             <div className="px-4 py-1">
                                 <p className="text-sm font-medium text-white">{user.name}</p>
@@ -120,6 +142,51 @@ export default function AuthenticatedLayout({ header, fill = false, children }) 
             )}
 
             <main className={fill ? 'min-h-0 flex-1' : ''}>{children}</main>
+
+            <FlashToast />
+        </div>
+    );
+}
+
+/**
+ * Shows the session's success flash, or a non-field error, as a floating glass toast.
+ */
+function FlashToast() {
+    const { flash, errors } = usePage().props;
+    const message = flash?.success ?? errors?.category ?? null;
+    const isError = !flash?.success && Boolean(errors?.category);
+    const [visible, setVisible] = useState(false);
+
+    useEffect(() => {
+        if (!message) return;
+        setVisible(true);
+        const timeout = setTimeout(() => setVisible(false), 4500);
+        return () => clearTimeout(timeout);
+    }, [message, flash, errors]);
+
+    if (!message || !visible) return null;
+
+    return (
+        <div className="pointer-events-none fixed inset-x-0 bottom-5 z-50 flex justify-center px-4">
+            <div
+                role="status"
+                className="glass-strong pointer-events-auto flex animate-rise items-center gap-3 rounded-full py-2.5 pl-3 pr-2 text-sm text-white"
+            >
+                {isError ? (
+                    <CircleAlert className="h-5 w-5 shrink-0 text-rose-300" />
+                ) : (
+                    <CircleCheck className="h-5 w-5 shrink-0 text-emerald-300" />
+                )}
+                <span>{message}</span>
+                <button
+                    type="button"
+                    onClick={() => setVisible(false)}
+                    className="flex h-7 w-7 items-center justify-center rounded-full text-white/50 hover:bg-white/10 hover:text-white"
+                    aria-label="Dismiss"
+                >
+                    <X className="h-3.5 w-3.5" />
+                </button>
+            </div>
         </div>
     );
 }

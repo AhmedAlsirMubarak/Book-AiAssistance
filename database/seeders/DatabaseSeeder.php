@@ -18,7 +18,7 @@ class DatabaseSeeder extends Seeder
         User::firstOrCreate(
             ['email' => 'test@example.com'],
             ['name' => 'Test User', 'password' => 'password', 'email_verified_at' => now()],
-        );
+        )->forceFill(['is_admin' => true])->save();
 
         $this->call([
             BookSeeder::class,
